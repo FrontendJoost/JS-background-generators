@@ -1,16 +1,25 @@
 // A js plugin for generating geometric triangle background.
 
 class Gradient {
-  constructor(from, to) {
-    this.from = from;
-    this.to = to;
+  constructor(colors) {
+    this.colors = colors;
   }
 
   point(pos) {
-    const r = Math.floor(this.from.r + (this.to.r - this.from.r) * pos);
-    const g = Math.floor(this.from.g + (this.to.g - this.from.g) * pos);
-    const b = Math.floor(this.from.b + (this.to.b - this.from.b) * pos);
+    var index = Math.floor(Math.abs(pos) * (this.colors.length - 1));
+    if (index >= this.colors.length - 1) {
+      index = this.colors.length - 2;
+    }
+    const from = this.colors[index];
+    const to = this.colors[index + 1];
+
+    pos = pos * (this.colors.length - 1) - index;
+
+    const r = Math.floor(from.r + (to.r - from.r) * pos);
+    const g = Math.floor(from.g + (to.g - from.g) * pos);
+    const b = Math.floor(from.b + (to.b - from.b) * pos);
     return new Color(r, g, b);
+    // return new Color(255, 255, 255);
   }
 }
 
@@ -77,9 +86,11 @@ class DAM {
     this.options = options;
     this.points = [];
     this.triangles = [];
-    const fromColor = Color.fromHex(this.options.gradient.from);
-    const toColor = Color.fromHex(this.options.gradient.to);
-    this.gradient = new Gradient(fromColor, toColor);
+    var colors = [];
+    for (let i = 0; i < options.gradient.colors.length; i++) {
+      colors.push(Color.fromHex(options.gradient.colors[i]));
+    }
+    this.gradient = new Gradient(colors);
     this.init();
   }
 
