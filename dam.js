@@ -10,10 +10,13 @@ class Gradient {
     if (index >= this.colors.length - 1) {
       index = this.colors.length - 2;
     }
+    console.log(pos);
     const from = this.colors[index];
     const to = this.colors[index + 1];
 
     pos = pos * (this.colors.length - 1) - index;
+
+    // console.log(pos);
 
     const r = Math.floor(from.r + (to.r - from.r) * pos);
     const g = Math.floor(from.g + (to.g - from.g) * pos);
@@ -53,17 +56,22 @@ class Color {
 }
 
 class Point {
-  constructor(x, y) {
+  constructor(x, y, localX, localY) {
     this.x = x;
     this.y = y;
+    this.localX = localX;
+    this.localY = localY;
   }
 }
 
 class Triangle {
-  constructor(a, b, c) {
+  constructor(a, b, c, aNR, BNR, cNR) {
     this.a = a;
     this.b = b;
     this.c = c;
+    this.aNR = aNR;
+    this.BNR = BNR;
+    this.cNR = cNR;
   }
 
   draw(ctx, color) {
@@ -86,72 +94,102 @@ class DAM {
     this.options = options;
     this.points = [];
     this.triangles = [];
+    this.pointsNotRandomized = [];
     var colors = [];
-    for (let i = 0; i < options.gradient.colors.length; i++) {
-      colors.push(Color.fromHex(options.gradient.colors[i]));
+    for (let i = 0; i < options.gradient.length; i++) {
+      colors.push(Color.fromHex(options.gradient[i]));
     }
     this.gradient = new Gradient(colors);
     this.init();
   }
 
   init() {
+    this.randomizeSize();
+
     // Create a 2d array
-    for (let i = 0; i < this.options.w + 3; i++) {
+    for (let i = 0; i < this.options.x + 3; i++) {
       this.points[i] = [];
-      for (let j = 0; j < this.options.h + 3; j++) {
-        const x = ((i - 1) * this.canvas.width) / this.options.w;
-        const y = ((j - 1) * this.canvas.height) / this.options.h;
-        this.points[i][j] = new Point(x, y);
+      for (let j = 0; j < this.options.y + 3; j++) {
+        const x = ((i - 1) * this.canvas.width) / this.options.x;
+        const y = ((j - 1) * this.canvas.height) / this.options.y;
+        this.points[i][j] = new Point(
+          x,
+          y,
+          i / (this.options.x + 3),
+          j / (this.options.y + 3)
+        );
       }
     }
-    this.randomizePoints(this.options.randomness);
+    this.pointsNotRandomized = JSON.parse(JSON.stringify(this.points));
+
+    this.randomizePoints(
+      this.options.randomness.pos,
+      this.options.randomness.pos / this.canvas.width
+    );
     // this.generateDots();
     this.generateTriangles();
-    this.drawTriangles(this.gradient, this.options.gradient.randomness);
+    this.drawTriangles(this.gradient, this.options.randomness.color);
+  }
+
+  randomizeSize() {
+    this.options.x +=
+      Math.floor(Math.random() * this.options.randomness.size * 2) -
+      this.options.randomness.size;
+    this.options.y +=
+      Math.floor(Math.random() * this.options.randomness.size * 2) -
+      this.options.randomness.size;
   }
 
   generateTriangles() {
     for (let x = 0; x < this.points.length - 1; x++) {
       for (let y = 0; y < this.points[x].length - 1; y++) {
-        const point = this.points[x][y];
-        const a = new Point(point.x, point.y);
-        const b = new Point(
-          this.points[x + 1][y + 1].x,
-          this.points[x + 1][y + 1].y
-        );
-        const c = new Point(this.points[x][y + 1].x, this.points[x][y + 1].y);
-        const triangle = new Triangle(a, b, c);
+        const a = this.points[x][y];
+        const b = this.points[x + 1][y + 1];
+        const c = this.points[x][y + 1];
+        const aNR = this.pointsNotRandomized[x][y];
+        const bNR = this.pointsNotRandomized[x + 1][y + 1];
+        const cNR = this.pointsNotRandomized[x][y + 1];
+        const triangle = new Triangle(a, b, c, aNR, bNR, cNR);
         this.triangles.push(triangle);
       }
     }
     for (let x = 0; x < this.points.length - 1; x++) {
       for (let y = 0; y < this.points[x].length - 1; y++) {
-        const point = this.points[x][y];
-        const a = new Point(point.x, point.y);
-        const b = new Point(
-          this.points[x + 1][y + 1].x,
-          this.points[x + 1][y + 1].y
-        );
-        const c = new Point(this.points[x + 1][y].x, this.points[x + 1][y].y);
-        const triangle = new Triangle(a, b, c);
+        const a = this.points[x][y];
+        const b = this.points[x + 1][y + 1];
+        const c = this.points[x + 1][y];
+        const aNR = this.pointsNotRandomized[x][y];
+        const bNR = this.pointsNotRandomized[x + 1][y + 1];
+        const cNR = this.pointsNotRandomized[x + 1][y];
+        const triangle = new Triangle(a, b, c, aNR, bNR, cNR);
         this.triangles.push(triangle);
       }
     }
   }
 
+  getGradientPos(a) {
+    const beta = (Math.atan(a.localY / a.localX) * 180) / Math.PI || 0;
+    const OA = Math.sqrt(a.localX * a.localX + a.localY * a.localY);
+    const gamma = beta - this.options.angle;
+    const OB = OA * Math.cos((gamma * Math.PI) / 180);
+    return OB;
+  }
+
   drawTriangles(gradient, randomness) {
     this.triangles.forEach((triangle) => {
-      var pos = triangle.a.x / this.canvas.width;
+      var pos = this.getGradientPos(triangle.aNR);
       triangle.draw(this.ctx, gradient.point(pos).randomize(randomness));
     });
   }
 
-  randomizePoints(amount) {
+  randomizePoints(amount, localAmount) {
     for (let x = 0; x < this.points.length; x++) {
       for (let y = 0; y < this.points[x].length; y++) {
         const point = this.points[x][y];
         point.x += Math.floor((Math.random() * 2 - 1) * amount);
         point.y += Math.floor((Math.random() * 2 - 1) * amount);
+        point.localX += Math.floor((Math.random() * 2 - 1) * localAmount);
+        point.localY += Math.floor((Math.random() * 2 - 1) * localAmount);
       }
     }
   }

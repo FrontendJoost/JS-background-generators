@@ -12,20 +12,15 @@
     <canvas width="1920px" height="1080px"></canvas>
     <script>
       const dam = new DAM(document.querySelector("canvas"), {
-        w: 30,
-        h: 20,
-        randomness: 20,
-        gradient: {
-          colors: [
-            "#ff0000",
-            "#00ff00",
-            "#0000ff",
-            "#ffff00",
-            "#ff00ff",
-            "#00ffff",
-          ],
-          randomness: 12,
+        x: 10,
+        y: 10,
+        angle: 45,
+        randomness: {
+          color: 6,
+          size: 2,
+          pos: 40,
         },
+        gradient: ["#ed3824", "#ed9d24"],
       });
     </script>
   </body>
