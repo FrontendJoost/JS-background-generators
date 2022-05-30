@@ -10,13 +10,10 @@ class Gradient {
     if (index >= this.colors.length - 1) {
       index = this.colors.length - 2;
     }
-    console.log(pos);
     const from = this.colors[index];
     const to = this.colors[index + 1];
 
     pos = pos * (this.colors.length - 1) - index;
-
-    // console.log(pos);
 
     const r = Math.floor(from.r + (to.r - from.r) * pos);
     const g = Math.floor(from.g + (to.g - from.g) * pos);
@@ -167,17 +164,20 @@ class DAM {
     }
   }
 
-  getGradientPos(a) {
-    const beta = (Math.atan(a.localY / a.localX) * 180) / Math.PI || 0;
-    const OA = Math.sqrt(a.localX * a.localX + a.localY * a.localY);
-    const gamma = beta - this.options.angle;
+  getGradientPos(x, y) {
+    const angle = this.options.angle;
+    const beta = (Math.atan(y / x) * 180) / Math.PI || 0;
+    const OA = Math.sqrt(x * x + y * y);
+    const gamma = beta - angle;
     const OB = OA * Math.cos((gamma * Math.PI) / 180);
-    return OB;
+    const OBmax =
+      Math.abs(Math.sqrt(2) * Math.cos(((45 - angle) * Math.PI) / 180)) - 0.25;
+    return OB / OBmax;
   }
 
   drawTriangles(gradient, randomness) {
     this.triangles.forEach((triangle) => {
-      var pos = this.getGradientPos(triangle.aNR);
+      var pos = this.getGradientPos(triangle.aNR.localX, triangle.aNR.localY);
       triangle.draw(this.ctx, gradient.point(pos).randomize(randomness));
     });
   }
